@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>
+            Regenerative Braking Monitor
+        </title>
+
+        <style>
+           
+        </style>
+
+        <script>
+            function ChangeText()
+            {
+                document.getElementById("Change").innerHTML = "Then you are on the wrong page BOZO";
+            }
+        
+            function Hide() 
+            {
+                var x = document.getElementById("hidden");
+                if (x.style.display === "none") 
+                {
+                    x.style.display = "block";
+                } 
+                else 
+                {
+                    x.style.display = "none";
+                }
+            }
+
+            function IMGChange() 
+            {
+                document.getElementById("IMG1").src = "IMG/BW.Logo.png";
+            }
+        </script>
+    </head>
+
+    <body>
+        <h1>
+            <u>Regenerative Braking Monitor</u>
+        </h1>
+
+        <img src="Directory/Example.jpg"/> <!-- Add Image -->
+
+        <a href="LED.php">Go to LED Control Page</a>
+        <a href="Sensor.php">View Sensor Readings</a>
+
+        <button onclick="Hide()">Click To Hide The Tools List</button>
+
+        <div> <!-- Add id = hidden to Enable Toggling of the Project Information -->
+            <h2>
+                Project Information: 
+            </h2>
+            <p>
+                Explain Project
+            </p>
+        </div>
+        
+        <div>
+            <h4>
+                Additional Resources:
+                <a href = "https://www.Example.com"> Website Name</a>
+            </h4>
+        </div>
+        
+        <div>
+        <button onclick="IMGChange()">Click For Change</button>
+
+        <img id=IMG1 src="Directory/Example.jpg"/>
+        </div>
+    </body>
+</html>
