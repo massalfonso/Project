@@ -1,44 +1,3 @@
-<!-- <!DOCTYPE html>
-<html>
-    <head>
-        <title>
-            Regenerative Braking Monitor
-        </title>
-
-        <style>
-           
-        </style>
-
-        <script>
-            function Hide() 
-            {
-                var x = document.getElementById("hidden");
-                if (x.style.display === "none") 
-                {
-                    x.style.display = "block";
-                } 
-                else 
-                {
-                    x.style.display = "none";
-                }
-            }
-
-            function IMGChange() 
-            {
-                document.getElementById("IMG1").src = "IMG/BW.Example.png";
-            }
-        </script>
-    </head>
-
-    <body>
-        <h1>
-            <u>Regenerative Braking Monitor</u>
-        </h1>
-
-        <img src="Directory/Example.jpg"/> <!-- Add Image -->
-    <!--</body>
-</html>-->
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -190,7 +149,7 @@ canvas{width:100%;height:250px}
   </div>
 </section>
 
-<!-- SIDE -->
+<!-- SIDEBAR -->
 <aside class="side">
 
 <section class="card">
@@ -225,9 +184,7 @@ canvas{width:100%;height:250px}
 </div>
 
 <script>
-/* =========================
-   STATIC DEMO VALUES ONLY
-   ========================= */
+/* STATIC DEMO VALUES */
 const efficiency = 65;
 const current    = 42;
 const voltage    = 51;
@@ -246,7 +203,7 @@ gIv.innerText   = current + " A";
 gTMv.innerText  = motorTemp + " °C";
 gTBv.innerText  = battTemp + " °C";
 
-/* GAUGE DRAWING */
+/* GAUGE GRAPHIC */
 function drawGauge(c,v,min,max,label,unit){
   const ctx=c.getContext("2d");
   const w=c.width=c.clientWidth;
@@ -289,7 +246,7 @@ drawGauge(gI, current, 0, 120, "Current", "A");
 drawGauge(gTM, motorTemp, 0, 120, "Motor", "°C");
 drawGauge(gTB, battTemp, 0, 90, "Battery", "°C");
 
-/* CHART.JS v3 – SINGLE POINT */
+/* CHART.JS V3'S SINGLE POINT */
 const baseOptions={
   responsive:true,
   plugins:{legend:{labels:{color:"#fff"}}},
