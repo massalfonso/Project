@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!-- <!DOCTYPE html>
 <html>
     <head>
         <title>
@@ -36,6 +36,146 @@
         </h1>
 
         <img src="Directory/Example.jpg"/> <!-- Add Image -->
-    </body>
+    <!--</body>
+</html>-->
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Regenerative Braking – Chart.js v3</title>
+
+  <!-- Chart.js v3 -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+
+  <style>
+    body {
+      background: #0b1020;
+      color: white;
+      font-family: system-ui;
+      padding: 20px;
+    }
+    canvas {
+      max-width: 900px;
+      margin-bottom: 40px;
+    }
+  </style>
+</head>
+<body>
+
+<h2>Efficiency vs Time</h2>
+<canvas id="effChart"></canvas>
+
+<h2>Charging Current & Voltage vs Time</h2>
+<canvas id="ivChart"></canvas>
+
+<script>
+  const labels = [];
+  const effData = [];
+  const currentData = [];
+  const voltageData = [];
+
+  const effChart = new Chart(
+    document.getElementById('effChart'),
+    {
+      type: 'line',
+      data: {
+        labels,
+        datasets: [{
+          label: 'Efficiency (%)',
+          data: effData,
+          borderColor: '#4ade80',
+          tension: 0.3
+        }]
+      },
+      options: {
+        plugins: {
+          legend: { labels: { color: 'white' } },
+          title: {
+            display: true,
+            text: 'Regenerative Efficiency',
+            color: 'white'
+          }
+        },
+        scales: {
+          x: {
+            ticks: { color: 'white' },
+            grid: { color: 'rgba(255,255,255,0.1)' }
+          },
+          y: {
+            min: 0,
+            max: 100,
+            ticks: { color: 'white' },
+            grid: { color: 'rgba(255,255,255,0.1)' }
+          }
+        }
+      }
+    }
+  );
+
+  const ivChart = new Chart(
+    document.getElementById('ivChart'),
+    {
+      type: 'line',
+      data: {
+        labels,
+        datasets: [
+          {
+            label: 'Charging Current (A)',
+            data: currentData,
+            borderColor: '#60a5fa',
+            tension: 0.3
+          },
+          {
+            label: 'Battery Voltage (V)',
+            data: voltageData,
+            borderColor: '#a78bfa',
+            tension: 0.3
+          }
+        ]
+      },
+      options: {
+        plugins: {
+          legend: { labels: { color: 'white' } }
+        },
+        scales: {
+          x: {
+            ticks: { color: 'white' },
+            grid: { color: 'rgba(255,255,255,0.1)' }
+          },
+          y: {
+            ticks: { color: 'white' },
+            grid: { color: 'rgba(255,255,255,0.1)' }
+          }
+        }
+      }
+    }
+  );
+
+  // Demo live data
+  let t = 0;
+  setInterval(() => {
+    const time = new Date().toLocaleTimeString();
+    labels.push(time);
+
+    effData.push(60 + 20 * Math.sin(t / 10));
+    currentData.push(30 + 15 * Math.sin(t / 5));
+    voltageData.push(48 + 3 * Math.sin(t / 7));
+
+    if (labels.length > 20) {
+      labels.shift();
+      effData.shift();
+      currentData.shift();
+      voltageData.shift();
+    }
+
+    effChart.update();
+    ivChart.update();
+    t++;
+  }, 1000);
+</script>
+
+</body>
 </html>
+
 
