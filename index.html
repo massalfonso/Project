@@ -42,140 +42,296 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>Regenerative Braking – Chart.js v3</title>
+<meta charset="UTF-8">
+<title>Regenerative Braking Dashboard</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
 
-  <!-- Chart.js v3 -->
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+<!-- Chart.js v3 -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
 
-  <style>
-    body {
-      background: #0b1020;
-      color: white;
-      font-family: system-ui;
-      padding: 20px;
-    }
-    canvas {
-      max-width: 900px;
-      margin-bottom: 40px;
-    }
-  </style>
+<style>
+:root {
+  --bg:#0b1020;
+  --panel:rgba(255,255,255,.06);
+  --panel2:rgba(255,255,255,.08);
+  --border:rgba(255,255,255,.12);
+  --text:#fff;
+  --muted:rgba(255,255,255,.65);
+  --good:#4ade80;
+  --warn:#fbbf24;
+  --bad:#fb7185;
+  --accent:#60a5fa;
+  --accent2:#a78bfa;
+  --radius:18px;
+}
+
+*{box-sizing:border-box}
+body{
+  margin:0;
+  background:var(--bg);
+  color:var(--text);
+  font-family:system-ui;
+}
+
+.wrap{
+  max-width:1300px;
+  margin:auto;
+  padding:24px;
+}
+
+header{
+  display:flex;
+  justify-content:space-between;
+  align-items:end;
+  margin-bottom:16px;
+}
+
+h1{margin:0;font-size:22px}
+.subtitle{color:var(--muted);font-size:13px}
+
+.grid{
+  display:grid;
+  grid-template-columns:1.2fr .8fr;
+  gap:16px;
+}
+
+.card{
+  background:var(--panel);
+  border:1px solid var(--border);
+  border-radius:var(--radius);
+}
+
+.hd{
+  padding:14px;
+  border-bottom:1px solid var(--border);
+  font-weight:600;
+}
+
+.bd{padding:14px}
+
+.kpis{
+  display:grid;
+  grid-template-columns:repeat(4,1fr);
+  gap:12px;
+}
+
+.kpi{
+  background:var(--panel2);
+  padding:12px;
+  border-radius:14px;
+}
+
+.kpi .label{color:var(--muted);font-size:12px}
+.kpi .val{font-size:20px;font-weight:700}
+
+.chartBox{
+  margin-top:14px;
+  background:rgba(255,255,255,.04);
+  border:1px solid var(--border);
+  border-radius:14px;
+  padding:10px;
+}
+
+canvas{width:100%;height:250px}
+
+.side{display:grid;gap:16px}
+
+.gauges{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:12px;
+}
+
+.gauge{
+  background:rgba(255,255,255,.05);
+  border:1px solid var(--border);
+  border-radius:14px;
+  padding:12px;
+}
+
+.gauge .top{
+  display:flex;
+  justify-content:space-between;
+  font-size:13px;
+}
+
+.dial{height:170px}
+</style>
 </head>
+
 <body>
+<div class="wrap">
 
-<h2>Efficiency vs Time</h2>
-<canvas id="effChart"></canvas>
+<header>
+  <div>
+    <h1>Regenerative Braking Dashboard</h1>
+    <div class="subtitle">Efficiency, charging & thermal monitoring</div>
+  </div>
+</header>
 
-<h2>Charging Current & Voltage vs Time</h2>
-<canvas id="ivChart"></canvas>
+<div class="grid">
+
+<!-- MAIN -->
+<section class="card">
+  <div class="hd">Overview</div>
+  <div class="bd">
+
+    <div class="kpis">
+      <div class="kpi"><div class="label">Efficiency</div><div class="val" id="kEff">--%</div></div>
+      <div class="kpi"><div class="label">Charge Current</div><div class="val" id="kI">-- A</div></div>
+      <div class="kpi"><div class="label">Battery Voltage</div><div class="val" id="kV">-- V</div></div>
+      <div class="kpi"><div class="label">RPM</div><div class="val" id="kRPM">--</div></div>
+    </div>
+
+    <div class="chartBox"><canvas id="effChart"></canvas></div>
+    <div class="chartBox"><canvas id="ivChart"></canvas></div>
+    <div class="chartBox"><canvas id="rpmChart"></canvas></div>
+
+  </div>
+</section>
+
+<!-- SIDE -->
+<aside class="side">
+
+<section class="card">
+  <div class="hd">Gauges</div>
+  <div class="bd gauges">
+
+    <div class="gauge">
+      <div class="top"><span>RPM</span><span id="gRPMv">--</span></div>
+      <canvas class="dial" id="gRPM"></canvas>
+    </div>
+
+    <div class="gauge">
+      <div class="top"><span>Charge Current</span><span id="gIv">-- A</span></div>
+      <canvas class="dial" id="gI"></canvas>
+    </div>
+
+    <div class="gauge">
+      <div class="top"><span>Motor Temp</span><span id="gTMv">-- °C</span></div>
+      <canvas class="dial" id="gTM"></canvas>
+    </div>
+
+    <div class="gauge">
+      <div class="top"><span>Battery Temp</span><span id="gTBv">-- °C</span></div>
+      <canvas class="dial" id="gTB"></canvas>
+    </div>
+
+  </div>
+</section>
+
+</aside>
+</div>
+</div>
 
 <script>
-  const labels = [];
-  const effData = [];
-  const currentData = [];
-  const voltageData = [];
+// ---------- Gauge Drawing ----------
+function drawGauge(c,v,min,max,label,unit){
+  const ctx=c.getContext("2d");
+  const w=c.width=c.clientWidth;
+  const h=c.height=c.clientHeight;
+  ctx.clearRect(0,0,w,h);
 
-  const effChart = new Chart(
-    document.getElementById('effChart'),
-    {
-      type: 'line',
-      data: {
-        labels,
-        datasets: [{
-          label: 'Efficiency (%)',
-          data: effData,
-          borderColor: '#4ade80',
-          tension: 0.3
-        }]
-      },
-      options: {
-        plugins: {
-          legend: { labels: { color: 'white' } },
-          title: {
-            display: true,
-            text: 'Regenerative Efficiency',
-            color: 'white'
-          }
-        },
-        scales: {
-          x: {
-            ticks: { color: 'white' },
-            grid: { color: 'rgba(255,255,255,0.1)' }
-          },
-          y: {
-            min: 0,
-            max: 100,
-            ticks: { color: 'white' },
-            grid: { color: 'rgba(255,255,255,0.1)' }
-          }
-        }
-      }
-    }
-  );
+  const cx=w/2, cy=h*0.65, r=Math.min(w,h)*0.45;
+  const start=Math.PI*0.8, end=Math.PI*2.2;
+  const t=(v-min)/(max-min);
 
-  const ivChart = new Chart(
-    document.getElementById('ivChart'),
-    {
-      type: 'line',
-      data: {
-        labels,
-        datasets: [
-          {
-            label: 'Charging Current (A)',
-            data: currentData,
-            borderColor: '#60a5fa',
-            tension: 0.3
-          },
-          {
-            label: 'Battery Voltage (V)',
-            data: voltageData,
-            borderColor: '#a78bfa',
-            tension: 0.3
-          }
-        ]
-      },
-      options: {
-        plugins: {
-          legend: { labels: { color: 'white' } }
-        },
-        scales: {
-          x: {
-            ticks: { color: 'white' },
-            grid: { color: 'rgba(255,255,255,0.1)' }
-          },
-          y: {
-            ticks: { color: 'white' },
-            grid: { color: 'rgba(255,255,255,0.1)' }
-          }
-        }
-      }
-    }
-  );
+  ctx.lineWidth=r*0.18;
+  ctx.strokeStyle="rgba(255,255,255,.15)";
+  ctx.beginPath();ctx.arc(cx,cy,r,start,end);ctx.stroke();
 
-  // Demo live data
-  let t = 0;
-  setInterval(() => {
-    const time = new Date().toLocaleTimeString();
-    labels.push(time);
+  ctx.strokeStyle="#4ade80";
+  ctx.beginPath();
+  ctx.arc(cx,cy,r,start,start+(end-start)*t);
+  ctx.stroke();
 
-    effData.push(60 + 20 * Math.sin(t / 10));
-    currentData.push(30 + 15 * Math.sin(t / 5));
-    voltageData.push(48 + 3 * Math.sin(t / 7));
+  const ang=start+(end-start)*t;
+  ctx.strokeStyle="#fff";
+  ctx.lineWidth=3;
+  ctx.beginPath();
+  ctx.moveTo(cx,cy);
+  ctx.lineTo(cx+Math.cos(ang)*r*0.9,cy+Math.sin(ang)*r*0.9);
+  ctx.stroke();
 
-    if (labels.length > 20) {
-      labels.shift();
-      effData.shift();
-      currentData.shift();
-      voltageData.shift();
-    }
+  ctx.textAlign="center";
+  ctx.fillText(label,cx,h*0.2);
+  ctx.fillText(Math.round(v)+" "+unit,cx,h*0.4);
+}
 
-    effChart.update();
-    ivChart.update();
-    t++;
-  }, 1000);
+// ---------- Charts (v3) ----------
+const baseOpt={
+  responsive:true,
+  plugins:{legend:{labels:{color:"#fff"}}},
+  scales:{
+    x:{ticks:{color:"#fff"},grid:{color:"rgba(255,255,255,.1)"}},
+    y:{ticks:{color:"#fff"},grid:{color:"rgba(255,255,255,.1)"}}
+  }
+};
+
+const effChart=new Chart(effChart,{
+  type:"line",
+  data:{labels:[],datasets:[{label:"Efficiency %",data:[],borderColor:"#4ade80",tension:.3}]},
+  options:baseOpt
+});
+
+const ivChart=new Chart(ivChart,{
+  type:"line",
+  data:{labels:[],datasets:[
+    {label:"Current (A)",data:[],borderColor:"#60a5fa",tension:.3},
+    {label:"Voltage (V)",data:[],borderColor:"#a78bfa",tension:.3}
+  ]},
+  options:baseOpt
+});
+
+const rpmChart=new Chart(rpmChart,{
+  type:"line",
+  data:{labels:[],datasets:[{label:"RPM",data:[],borderColor:"#fbbf24",tension:.3}]},
+  options:baseOpt
+});
+
+// ---------- Demo Data Loop ----------
+let t=0;
+setInterval(()=>{
+  const time=new Date().toLocaleTimeString();
+
+  const rpm=3000+1500*Math.sin(t/10);
+  const current=40+20*Math.sin(t/5);
+  const voltage=48+4*Math.sin(t/7);
+  const eff=60+20*Math.sin(t/8);
+  const tm=40+current*0.15;
+  const tb=30+current*0.1;
+
+  [effChart,ivChart,rpmChart].forEach(c=>{
+    c.data.labels.push(time);
+    if(c.data.labels.length>30)c.data.labels.shift();
+  });
+
+  effChart.data.datasets[0].data.push(eff);
+  ivChart.data.datasets[0].data.push(current);
+  ivChart.data.datasets[1].data.push(voltage);
+  rpmChart.data.datasets[0].data.push(rpm);
+
+  effChart.update();
+  ivChart.update();
+  rpmChart.update();
+
+  kEff.innerText=eff.toFixed(0)+"%";
+  kI.innerText=current.toFixed(1)+" A";
+  kV.innerText=voltage.toFixed(1)+" V";
+  kRPM.innerText=rpm.toFixed(0);
+
+  gRPMv.innerText=rpm.toFixed(0);
+  gIv.innerText=current.toFixed(1)+" A";
+  gTMv.innerText=tm.toFixed(1)+" °C";
+  gTBv.innerText=tb.toFixed(1)+" °C";
+
+  drawGauge(gRPM,rpm,0,6000,"RPM","");
+  drawGauge(gI,current,0,120,"Current","A");
+  drawGauge(gTM,tm,0,120,"Motor","°C");
+  drawGauge(gTB,tb,0,90,"Battery","°C");
+
+  t++;
+},1000);
 </script>
-
 </body>
 </html>
-
-
