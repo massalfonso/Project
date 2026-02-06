@@ -42,73 +42,220 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>Regenerative Braking – Chart.js v3</title>
+<meta charset="UTF-8">
+<title>Regenerative Braking Dashboard</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
 
-  <!-- Chart.js v3 -->
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+<!-- Chart.js v3 -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
 
-  <style>
-    body {
-      background: #0b1020;
-      color: white;
-      font-family: system-ui;
-      padding: 20px;
-    }
-    canvas {
-      max-width: 900px;
-      margin-bottom: 40px;
-    }
-  </style>
+<style>
+:root {
+  --bg:#0b1020;
+  --panel:rgba(255,255,255,.06);
+  --panel2:rgba(255,255,255,.08);
+  --border:rgba(255,255,255,.12);
+  --text:#fff;
+  --muted:rgba(255,255,255,.65);
+  --good:#4ade80;
+  --warn:#fbbf24;
+  --bad:#fb7185;
+  --accent:#60a5fa;
+  --accent2:#a78bfa;
+  --radius:18px;
+}
+
+*{box-sizing:border-box}
+body{
+  margin:0;
+  background:var(--bg);
+  color:var(--text);
+  font-family:system-ui;
+}
+
+.wrap{
+  max-width:1300px;
+  margin:auto;
+  padding:24px;
+}
+
+header{
+  display:flex;
+  justify-content:space-between;
+  align-items:end;
+  margin-bottom:16px;
+}
+
+h1{margin:0;font-size:22px}
+.subtitle{color:var(--muted);font-size:13px}
+
+.grid{
+  display:grid;
+  grid-template-columns:1.2fr .8fr;
+  gap:16px;
+}
+
+.card{
+  background:var(--panel);
+  border:1px solid var(--border);
+  border-radius:var(--radius);
+}
+
+.hd{
+  padding:14px;
+  border-bottom:1px solid var(--border);
+  font-weight:600;
+}
+
+.bd{padding:14px}
+
+.kpis{
+  display:grid;
+  grid-template-columns:repeat(4,1fr);
+  gap:12px;
+}
+
+.kpi{
+  background:var(--panel2);
+  padding:12px;
+  border-radius:14px;
+}
+
+.kpi .label{color:var(--muted);font-size:12px}
+.kpi .val{font-size:20px;font-weight:700}
+
+.chartBox{
+  margin-top:14px;
+  background:rgba(255,255,255,.04);
+  border:1px solid var(--border);
+  border-radius:14px;
+  padding:10px;
+}
+
+canvas{width:100%;height:250px}
+
+.side{display:grid;gap:16px}
+
+.gauges{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:12px;
+}
+
+.gauge{
+  background:rgba(255,255,255,.05);
+  border:1px solid var(--border);
+  border-radius:14px;
+  padding:12px;
+}
+
+.gauge .top{
+  display:flex;
+  justify-content:space-between;
+  font-size:13px;
+}
+
+.dial{height:170px}
+</style>
 </head>
+
 <body>
+<div class="wrap">
 
-<h2>Efficiency vs Time</h2>
-<canvas id="effChart"></canvas>
+<header>
+  <div>
+    <h1>Regenerative Braking Dashboard</h1>
+    <div class="subtitle">Efficiency, charging & thermal monitoring</div>
+  </div>
+</header>
 
-<h2>Charging Current & Voltage vs Time</h2>
-<canvas id="ivChart"></canvas>
+<div class="grid">
+
+<!-- MAIN -->
+<section class="card">
+  <div class="hd">Overview</div>
+  <div class="bd">
+
+    <div class="kpis">
+      <div class="kpi"><div class="label">Efficiency</div><div class="val" id="kEff">--%</div></div>
+      <div class="kpi"><div class="label">Charge Current</div><div class="val" id="kI">-- A</div></div>
+      <div class="kpi"><div class="label">Battery Voltage</div><div class="val" id="kV">-- V</div></div>
+      <div class="kpi"><div class="label">RPM</div><div class="val" id="kRPM">--</div></div>
+    </div>
+
+    <div class="chartBox"><canvas id="effChart"></canvas></div>
+    <div class="chartBox"><canvas id="ivChart"></canvas></div>
+    <div class="chartBox"><canvas id="rpmChart"></canvas></div>
+
+  </div>
+</section>
+
+<!-- SIDE -->
+<aside class="side">
+
+<section class="card">
+  <div class="hd">Gauges</div>
+  <div class="bd gauges">
+
+    <div class="gauge">
+      <div class="top"><span>RPM</span><span id="gRPMv">--</span></div>
+      <canvas class="dial" id="gRPM"></canvas>
+    </div>
+
+    <div class="gauge">
+      <div class="top"><span>Charge Current</span><span id="gIv">-- A</span></div>
+      <canvas class="dial" id="gI"></canvas>
+    </div>
+
+    <div class="gauge">
+      <div class="top"><span>Motor Temp</span><span id="gTMv">-- °C</span></div>
+      <canvas class="dial" id="gTM"></canvas>
+    </div>
+
+    <div class="gauge">
+      <div class="top"><span>Battery Temp</span><span id="gTBv">-- °C</span></div>
+      <canvas class="dial" id="gTB"></canvas>
+    </div>
+
+  </div>
+</section>
+
+</aside>
+</div>
+</div>
 
 <script>
-/* ============================
-   STATIC DEMO VALUES
-   ============================ */
-const demo = {
-  labels: ["0s","1s","2s","3s","4s","5s"],
-  efficiency: [55, 60, 62, 65, 63, 66],
-  current:    [10, 25, 40, 55, 45, 60],
-  voltage:    [48, 49, 50, 51, 50, 52],
-  rpm:        [3200, 3000, 2800, 2600, 2400, 2200],
-  motorTemp:  68,
-  battTemp:   42
-};
+/* =========================
+   STATIC DEMO VALUES ONLY
+   ========================= */
+const efficiency = 65;
+const current    = 42;
+const voltage    = 51;
+const rpm        = 2800;
+const motorTemp  = 72;
+const battTemp   = 44;
 
-/* ============================
-   KPI TEXT
-   ============================ */
-kEff.innerText  = demo.efficiency.at(-1) + "%";
-kI.innerText    = demo.current.at(-1) + " A";
-kV.innerText    = demo.voltage.at(-1) + " V";
-kRPM.innerText  = demo.rpm.at(-1);
+/* KPI TEXT */
+kEff.innerText = efficiency + "%";
+kI.innerText   = current + " A";
+kV.innerText   = voltage + " V";
+kRPM.innerText = rpm;
 
-gRPMv.innerText = demo.rpm.at(-1);
-gIv.innerText   = demo.current.at(-1) + " A";
-gTMv.innerText  = demo.motorTemp + " °C";
-gTBv.innerText  = demo.battTemp + " °C";
+gRPMv.innerText = rpm;
+gIv.innerText   = current + " A";
+gTMv.innerText  = motorTemp + " °C";
+gTBv.innerText  = battTemp + " °C";
 
-/* ============================
-   GAUGE DRAWING
-   ============================ */
+/* GAUGE DRAWING */
 function drawGauge(c,v,min,max,label,unit){
   const ctx=c.getContext("2d");
   const w=c.width=c.clientWidth;
   const h=c.height=c.clientHeight;
-
   ctx.clearRect(0,0,w,h);
 
   const cx=w/2, cy=h*0.65, r=Math.min(w,h)*0.45;
   const start=Math.PI*0.8, end=Math.PI*2.2;
-  const t=Math.min(1,Math.max(0,(v-min)/(max-min)));
+  const t=(v-min)/(max-min);
 
   ctx.lineWidth=r*0.18;
   ctx.strokeStyle="rgba(255,255,255,.15)";
@@ -137,77 +284,60 @@ function drawGauge(c,v,min,max,label,unit){
   ctx.fillText(Math.round(v)+" "+unit,cx,h*0.4);
 }
 
-drawGauge(gRPM, demo.rpm.at(-1), 0, 6000, "RPM", "");
-drawGauge(gI,   demo.current.at(-1), 0, 120, "Current", "A");
-drawGauge(gTM,  demo.motorTemp, 0, 120, "Motor", "°C");
-drawGauge(gTB,  demo.battTemp,  0, 90,  "Battery", "°C");
+drawGauge(gRPM, rpm, 0, 6000, "RPM", "");
+drawGauge(gI, current, 0, 120, "Current", "A");
+drawGauge(gTM, motorTemp, 0, 120, "Motor", "°C");
+drawGauge(gTB, battTemp, 0, 90, "Battery", "°C");
 
-/* ============================
-   CHART.JS v3 CONFIG
-   ============================ */
-const baseOptions = {
-  responsive: true,
-  plugins: {
-    legend: { labels: { color: "#fff" } }
-  },
-  scales: {
-    x: { ticks: { color: "#fff" }, grid: { color: "rgba(255,255,255,.1)" } },
-    y: { ticks: { color: "#fff" }, grid: { color: "rgba(255,255,255,.1)" } }
+/* CHART.JS v3 – SINGLE POINT */
+const baseOptions={
+  responsive:true,
+  plugins:{legend:{labels:{color:"#fff"}}},
+  scales:{
+    x:{ticks:{color:"#fff"},grid:{color:"rgba(255,255,255,.1)"}},
+    y:{ticks:{color:"#fff"},grid:{color:"rgba(255,255,255,.1)"}}
   }
 };
 
-new Chart(document.getElementById("effChart"), {
-  type: "line",
-  data: {
-    labels: demo.labels,
-    datasets: [{
-      label: "Efficiency (%)",
-      data: demo.efficiency,
-      borderColor: "#4ade80",
-      tension: 0.3
+new Chart(effChart,{
+  type:"line",
+  data:{
+    labels:["Now"],
+    datasets:[{
+      label:"Efficiency (%)",
+      data:[efficiency],
+      borderColor:"#4ade80",
+      tension:.3
     }]
   },
-  options: baseOptions
+  options:baseOptions
 });
 
-new Chart(document.getElementById("ivChart"), {
-  type: "line",
-  data: {
-    labels: demo.labels,
-    datasets: [
-      {
-        label: "Charging Current (A)",
-        data: demo.current,
-        borderColor: "#60a5fa",
-        tension: 0.3
-      },
-      {
-        label: "Battery Voltage (V)",
-        data: demo.voltage,
-        borderColor: "#a78bfa",
-        tension: 0.3
-      }
+new Chart(ivChart,{
+  type:"line",
+  data:{
+    labels:["Now"],
+    datasets:[
+      {label:"Current (A)",data:[current],borderColor:"#60a5fa"},
+      {label:"Voltage (V)",data:[voltage],borderColor:"#a78bfa"}
     ]
   },
-  options: baseOptions
+  options:baseOptions
 });
 
-new Chart(document.getElementById("rpmChart"), {
-  type: "line",
-  data: {
-    labels: demo.labels,
-    datasets: [{
-      label: "RPM",
-      data: demo.rpm,
-      borderColor: "#fbbf24",
-      tension: 0.3
+new Chart(rpmChart,{
+  type:"line",
+  data:{
+    labels:["Now"],
+    datasets:[{
+      label:"RPM",
+      data:[rpm],
+      borderColor:"#fbbf24"
     }]
   },
-  options: baseOptions
+  options:baseOptions
 });
 </script>
-
-
 </body>
 </html>
 
