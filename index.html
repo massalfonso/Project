@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
 <meta charset="UTF-8">
 <title>Regenerative Braking Dashboard</title>
@@ -184,25 +184,6 @@ canvas{width:100%;height:250px}
 </div>
 
 <script>
-/* STATIC DEMO VALUES */
-const efficiency = 65;
-const current    = 42;
-const voltage    = 51;
-const rpm        = 2800;
-const motorTemp  = 72;
-const battTemp   = 44;
-
-/* KPI TEXT */
-kEff.innerText = efficiency + "%";
-kI.innerText   = current + " A";
-kV.innerText   = voltage + " V";
-kRPM.innerText = rpm;
-
-gRPMv.innerText = rpm;
-gIv.innerText   = current + " A";
-gTMv.innerText  = motorTemp + " °C";
-gTBv.innerText  = battTemp + " °C";
-
 /* GAUGE GRAPHIC */
 function drawGauge(c,v,min,max,label,unit){
   const ctx=c.getContext("2d");
@@ -240,11 +221,6 @@ function drawGauge(c,v,min,max,label,unit){
   ctx.font="14px system-ui";
   ctx.fillText(Math.round(v)+" "+unit,cx,h*0.4);
 }
-
-drawGauge(gRPM, rpm, 0, 6000, "RPM", "");
-drawGauge(gI, current, 0, 120, "Current", "A");
-drawGauge(gTM, motorTemp, 0, 120, "Motor", "°C");
-drawGauge(gTB, battTemp, 0, 90, "Battery", "°C");
 
 /* CHART.JS V3'S SINGLE POINT */
 const baseOptions={
@@ -294,6 +270,56 @@ new Chart(rpmChart,{
   },
   options:baseOptions
 });
+
+/* ------------------------------------------
+   LIVE DATA FROM PI (WEBSOCKET)
+------------------------------------------- */
+
+const socket = new WebSocket("ws://project.local:8090/Project");
+
+socket.onmessage = (event) => {
+    const data = JSON.parse(event.data);
+
+    const voltage = data.voltage;
+    const current = data.current;
+    const rpm     = data.rpm;
+    const temp    = data.temp;
+    const eff     = data.efficiency;
+    const battTemp = data.battTemp;
+
+    // -------------------------
+    // UPDATE KPI TEXT
+    // -------------------------
+    kV.innerText   = voltage + " V";
+    kI.innerText   = current + " A";
+    kRPM.innerText = rpm;
+    kEff.innerText = eff + "%";
+
+    // -------------------------
+    // UPDATE GAUGES
+    // -------------------------
+    drawGauge(gRPM, rpm, 0, 6000, "RPM", "");
+    drawGauge(gI, current, 0, 120, "Current", "A");
+    drawGauge(gTM, temp, 0, 120, "Motor", "°C");
+    drawGauge(gTB, battTemp, 0, 90, "Battery", "°C");
+
+    // -------------------------
+    // UPDATE CHARTS
+    // -------------------------
+    effChart.data.labels.push("");
+    effChart.data.datasets[0].data.push(eff);
+    effChart.update();
+
+    ivChart.data.labels.push("");
+    ivChart.data.datasets[0].data.push(current);
+    ivChart.data.datasets[1].data.push(voltage);
+    ivChart.update();
+
+    rpmChart.data.labels.push("");
+    rpmChart.data.datasets[0].data.push(rpm);
+    rpmChart.update();
+};
+
 </script>
 </body>
 </html>
