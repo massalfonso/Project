@@ -3,7 +3,6 @@ import json
 import serial
 import websockets
 
-# ---- CONFIG ----
 SERIAL_PORT = "/dev/ttyACM0"
 BAUD_RATE = 9600
 
@@ -19,34 +18,40 @@ async def handler(websocket, path):
 async def serial_reader():
     ser = serial.Serial(SERIAL_PORT, BAUD_RATE, timeout=1)
 
-    # Give Arduino time to reboot after serial opens
+    # Arduino resets when serial opens — give it time
     await asyncio.sleep(2)
 
     while True:
-        line = ser.readline().decode().strip()
+        try:
+            raw = ser.readline()
+        except serial.SerialException:
+            continue  # port hiccup, skip and keep going
 
-        # Skip empty reads
+        if not raw:
+            continue  # empty read, skip
+
+        try:
+            line = raw.decode(errors="ignore").strip()
+        except:
+            continue
+
         if not line:
             continue
 
-        # Try to parse JSON safely
         try:
             data = json.loads(line)
-        except json.JSONDecodeError:
-            continue  # skip malformed packets
+        except:
+            continue  # malformed JSON, skip
 
-        # Broadcast to all connected clients
         if clients:
             msg = json.dumps(data)
             await asyncio.gather(*(ws.send(msg) for ws in clients))
 
 async def main():
-    # Start WebSocket server
-    server = await websockets.serve(handler, "0.0.0.0", 8080)
     print("WebSocket server running on ws://0.0.0.0:8080")
-
-    # Start serial reader
+    await websockets.serve(handler, "0.0.0.0", 8080)
     await serial_reader()
 
 asyncio.run(main())
+
 
