@@ -225,6 +225,7 @@ function drawGauge(c,v,min,max,label,unit){
 /* CHART.JS BASE OPTIONS */
 const baseOptions={
   responsive:true,
+  maintainAspectRatio:false,
   plugins:{legend:{labels:{color:"#fff"}}},
   scales:{
     x:{ticks:{color:"#fff"},grid:{color:"rgba(255,255,255,.1)"}},
@@ -232,8 +233,8 @@ const baseOptions={
   }
 };
 
-/* SAFE CHART INITIALIZATION (NO UNDEFINED VARIABLES) */
-new Chart(effChart,{
+/* INITIALIZE CHARTS */
+const effChart = new Chart(document.getElementById('effChart'), {
   type:"line",
   data:{
     labels:["Now"],
@@ -247,7 +248,7 @@ new Chart(effChart,{
   options:baseOptions
 });
 
-new Chart(ivChart,{
+const ivChart = new Chart(document.getElementById('ivChart'), {
   type:"line",
   data:{
     labels:["Now"],
@@ -259,7 +260,7 @@ new Chart(ivChart,{
   options:baseOptions
 });
 
-new Chart(rpmChart,{
+const rpmChart = new Chart(document.getElementById('rpmChart'), {
   type:"line",
   data:{
     labels:["Now"],
@@ -273,10 +274,22 @@ new Chart(rpmChart,{
 });
 
 /* ------------------------------------------
-   LIVE DATA FROM PI (WEBSOCKET)
+   WEBSOCKET CONNECTION
 ------------------------------------------- */
 
 const socket = new WebSocket("ws://project.local:8080");
+
+socket.onopen = () => {
+    console.log("✓ WebSocket connected");
+};
+
+socket.onerror = (error) => {
+    console.error("WebSocket error:", error);
+};
+
+socket.onclose = () => {
+    console.log("WebSocket disconnected");
+};
 
 socket.onmessage = (event) => {
     const data = JSON.parse(event.data);
@@ -300,22 +313,33 @@ socket.onmessage = (event) => {
     drawGauge(gTM, temp, 0, 120, "Motor", "°C");
     drawGauge(gTB, battTemp, 0, 90, "Battery", "°C");
 
-    // UPDATE CHARTS
+    // UPDATE CHARTS (keep last 20 points)
+    if (effChart.data.labels.length > 20) {
+        effChart.data.labels.shift();
+        effChart.data.datasets[0].data.shift();
+    }
     effChart.data.labels.push("");
     effChart.data.datasets[0].data.push(eff);
-    effChart.update();
+    effChart.update('none'); // Update without animation for smoother performance
 
+    if (ivChart.data.labels.length > 20) {
+        ivChart.data.labels.shift();
+        ivChart.data.datasets[0].data.shift();
+        ivChart.data.datasets[1].data.shift();
+    }
     ivChart.data.labels.push("");
     ivChart.data.datasets[0].data.push(current);
     ivChart.data.datasets[1].data.push(voltage);
-    ivChart.update();
+    ivChart.update('none');
 
+    if (rpmChart.data.labels.length > 20) {
+        rpmChart.data.labels.shift();
+        rpmChart.data.datasets[0].data.shift();
+    }
     rpmChart.data.labels.push("");
     rpmChart.data.datasets[0].data.push(rpm);
-    rpmChart.update();
+    rpmChart.update('none');
 };
 </script>
 </body>
 </html>
-
-
