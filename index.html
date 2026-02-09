@@ -276,7 +276,7 @@ new Chart(rpmChart,{
    LIVE DATA FROM PI (WEBSOCKET)
 ------------------------------------------- */
 
-const socket = new WebSocket("ws://192.168.2.173:8080");
+const socket = new WebSocket("ws://127.0.0.1:8080");
 
 socket.onmessage = (event) => {
     const data = JSON.parse(event.data);
