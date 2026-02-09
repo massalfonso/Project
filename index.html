@@ -222,7 +222,7 @@ function drawGauge(c,v,min,max,label,unit){
   ctx.fillText(Math.round(v)+" "+unit,cx,h*0.4);
 }
 
-/* CHART.JS V3'S SINGLE POINT */
+/* CHART.JS BASE OPTIONS */
 const baseOptions={
   responsive:true,
   plugins:{legend:{labels:{color:"#fff"}}},
@@ -232,13 +232,14 @@ const baseOptions={
   }
 };
 
+/* SAFE CHART INITIALIZATION (NO UNDEFINED VARIABLES) */
 new Chart(effChart,{
   type:"line",
   data:{
     labels:["Now"],
     datasets:[{
       label:"Efficiency (%)",
-      data:[efficiency],
+      data:[0],
       borderColor:"#4ade80",
       tension:.3
     }]
@@ -251,8 +252,8 @@ new Chart(ivChart,{
   data:{
     labels:["Now"],
     datasets:[
-      {label:"Current (A)",data:[current],borderColor:"#60a5fa"},
-      {label:"Voltage (V)",data:[voltage],borderColor:"#a78bfa"}
+      {label:"Current (A)",data:[0],borderColor:"#60a5fa"},
+      {label:"Voltage (V)",data:[0],borderColor:"#a78bfa"}
     ]
   },
   options:baseOptions
@@ -264,7 +265,7 @@ new Chart(rpmChart,{
     labels:["Now"],
     datasets:[{
       label:"RPM",
-      data:[rpm],
+      data:[0],
       borderColor:"#fbbf24"
     }]
   },
@@ -287,25 +288,19 @@ socket.onmessage = (event) => {
     const eff     = data.efficiency;
     const battTemp = data.battTemp;
 
-    // -------------------------
     // UPDATE KPI TEXT
-    // -------------------------
     kV.innerText   = voltage + " V";
     kI.innerText   = current + " A";
     kRPM.innerText = rpm;
     kEff.innerText = eff + "%";
 
-    // -------------------------
     // UPDATE GAUGES
-    // -------------------------
     drawGauge(gRPM, rpm, 0, 6000, "RPM", "");
     drawGauge(gI, current, 0, 120, "Current", "A");
     drawGauge(gTM, temp, 0, 120, "Motor", "°C");
     drawGauge(gTB, battTemp, 0, 90, "Battery", "°C");
 
-    // -------------------------
     // UPDATE CHARTS
-    // -------------------------
     effChart.data.labels.push("");
     effChart.data.datasets[0].data.push(eff);
     effChart.update();
@@ -319,7 +314,6 @@ socket.onmessage = (event) => {
     rpmChart.data.datasets[0].data.push(rpm);
     rpmChart.update();
 };
-
 </script>
 </body>
 </html>
