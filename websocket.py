@@ -13,7 +13,7 @@ async def handler(websocket, path):
         clients.remove(websocket)
 
 async def serial_reader():
-    ser = serial.Serial('/dev/ttyUSB0', 9600, timeout=1)
+    ser = serial.Serial('/dev/ttyACM0', 9600, timeout=1)
     while True:
         line = ser.readline().decode().strip()
         if not line:
