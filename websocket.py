@@ -27,6 +27,8 @@ async def serial_reader():
         except serial.SerialException:
             continue  # port hiccup, skip and keep going
 
+        print("RAW:", raw)   # ← DEBUG PRINT ADDED HERE
+
         if not raw:
             continue  # empty read, skip
 
@@ -53,5 +55,6 @@ async def main():
     await serial_reader()
 
 asyncio.run(main())
+
 
 
