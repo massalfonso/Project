@@ -51,7 +51,7 @@ async def serial_reader():
 
 async def main():
     print("WebSocket server running on ws://0.0.0.0:8080")
-    await websockets.serve(handler, "0.0.0.0", 8080)
+    await websockets.serve(handler, "127.0.0.1", 8080)
     await serial_reader()
 
 asyncio.run(main())
