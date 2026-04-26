@@ -40,12 +40,13 @@ body{
 
 header{
   display:flex;
-  justify-content:space-between;
-  align-items:end;
-  margin-bottom:16px;
+  flex-direction:column;
+  align-items:center;
+  text-align:center;
+  margin-bottom:24px;
 }
 
-h1{margin:0;font-size:22px}
+h1{margin:0 0 6px 0;font-size:28px}
 .subtitle{color:var(--muted);font-size:13px}
 
 .grid{
@@ -70,7 +71,7 @@ h1{margin:0;font-size:22px}
 
 .kpis{
   display:grid;
-  grid-template-columns:repeat(4,1fr);
+  grid-template-columns:repeat(3,1fr);
   gap:12px;
 }
 
@@ -114,7 +115,19 @@ canvas{width:100%;height:250px}
   font-size:13px;
 }
 
-.dial{height:170px}
+.dial{
+  height:150px;
+  width:100%;
+  display:block;
+}
+
+.gauge-val{
+  text-align:center;
+  font-size:15px;
+  font-weight:600;
+  margin-top:4px;
+  color:var(--text);
+}
 </style>
 </head>
 
@@ -122,10 +135,8 @@ canvas{width:100%;height:250px}
 <div class="wrap">
 
 <header>
-  <div>
-    <h1>Regenerative Braking Dashboard</h1>
-    <div class="subtitle">Efficiency, charging & thermal monitoring</div>
-  </div>
+  <h1>Regenerative Braking Dashboard</h1>
+  <div class="subtitle">Charging &amp; thermal monitoring</div>
 </header>
 
 <div class="grid">
@@ -136,15 +147,12 @@ canvas{width:100%;height:250px}
   <div class="bd">
 
     <div class="kpis">
-      <div class="kpi"><div class="label">Efficiency</div><div class="val" id="kEff">--%</div></div>
       <div class="kpi"><div class="label">Charge Current</div><div class="val" id="kI">-- A</div></div>
       <div class="kpi"><div class="label">Battery Voltage</div><div class="val" id="kV">-- V</div></div>
       <div class="kpi"><div class="label">RPM</div><div class="val" id="kRPM">--</div></div>
     </div>
 
-    <div class="chartBox"><canvas id="effChart"></canvas></div>
     <div class="chartBox"><canvas id="ivChart"></canvas></div>
-    <div class="chartBox"><canvas id="rpmChart"></canvas></div>
 
   </div>
 </section>
@@ -157,23 +165,27 @@ canvas{width:100%;height:250px}
   <div class="bd gauges">
 
     <div class="gauge">
-      <div class="top"><span>RPM</span><span id="gRPMv">--</span></div>
+      <div class="top"><span>RPM</span></div>
       <canvas class="dial" id="gRPM"></canvas>
+      <div class="gauge-val" id="gRPMv">--</div>
     </div>
 
     <div class="gauge">
-      <div class="top"><span>Charge Current</span><span id="gIv">-- A</span></div>
+      <div class="top"><span>Charge Current</span></div>
       <canvas class="dial" id="gI"></canvas>
+      <div class="gauge-val" id="gIv">-- A</div>
     </div>
 
     <div class="gauge">
-      <div class="top"><span>Motor Temp</span><span id="gTMv">-- °C</span></div>
+      <div class="top"><span>Motor Temp</span></div>
       <canvas class="dial" id="gTM"></canvas>
+      <div class="gauge-val" id="gTMv">-- °C</div>
     </div>
 
     <div class="gauge">
-      <div class="top"><span>Battery Temp</span><span id="gTBv">-- °C</span></div>
+      <div class="top"><span>Battery Temp</span></div>
       <canvas class="dial" id="gTB"></canvas>
+      <div class="gauge-val" id="gTBv">-- °C</div>
     </div>
 
   </div>
@@ -184,162 +196,128 @@ canvas{width:100%;height:250px}
 </div>
 
 <script>
-/* GAUGE GRAPHIC */
-function drawGauge(c,v,min,max,label,unit){
-  const ctx=c.getContext("2d");
-  const w=c.width=c.clientWidth;
-  const h=c.height=c.clientHeight;
-  ctx.clearRect(0,0,w,h);
+/* GAUGE GRAPHIC - no longer sets canvas size, just draws */
+function drawGauge(c, v, min, max) {
+  const ctx = c.getContext("2d");
+  const w = c.width;
+  const h = c.height;
+  ctx.clearRect(0, 0, w, h);
 
-  const cx=w/2, cy=h*0.65, r=Math.min(w,h)*0.45;
-  const start=Math.PI*0.8, end=Math.PI*2.2;
-  const t=(v-min)/(max-min);
+  const cx = w / 2, cy = h * 0.65, r = Math.min(w, h) * 0.45;
+  const start = Math.PI * 0.8, end = Math.PI * 2.2;
+  const t = Math.min(Math.max((v - min) / (max - min), 0), 1);
 
-  ctx.lineWidth=r*0.18;
-  ctx.strokeStyle="rgba(255,255,255,.15)";
+  ctx.lineWidth = r * 0.18;
+  ctx.strokeStyle = "rgba(255,255,255,.15)";
   ctx.beginPath();
-  ctx.arc(cx,cy,r,start,end);
+  ctx.arc(cx, cy, r, start, end);
   ctx.stroke();
 
-  ctx.strokeStyle="#4ade80";
+  ctx.strokeStyle = "#4ade80";
   ctx.beginPath();
-  ctx.arc(cx,cy,r,start,start+(end-start)*t);
+  ctx.arc(cx, cy, r, start, start + (end - start) * t);
   ctx.stroke();
 
-  const ang=start+(end-start)*t;
-  ctx.strokeStyle="#fff";
-  ctx.lineWidth=3;
+  const ang = start + (end - start) * t;
+  ctx.strokeStyle = "#fff";
+  ctx.lineWidth = 3;
   ctx.beginPath();
-  ctx.moveTo(cx,cy);
-  ctx.lineTo(cx+Math.cos(ang)*r*0.9,cy+Math.sin(ang)*r*0.9);
+  ctx.moveTo(cx, cy);
+  ctx.lineTo(cx + Math.cos(ang) * r * 0.9, cy + Math.sin(ang) * r * 0.9);
   ctx.stroke();
+}
 
-  ctx.textAlign="center";
-  ctx.fillStyle="#fff";
-  ctx.font="12px system-ui";
-  ctx.fillText(label,cx,h*0.2);
-  ctx.font="14px system-ui";
-  ctx.fillText(Math.round(v)+" "+unit,cx,h*0.4);
+/* INIT GAUGE CANVAS SIZES ONCE ON LOAD */
+function initGauges() {
+  [gRPM, gI, gTM, gTB].forEach(c => {
+    c.width  = c.offsetWidth  || 150;
+    c.height = c.offsetHeight || 150;
+  });
 }
 
 /* CHART.JS BASE OPTIONS */
-const baseOptions={
-  responsive:true,
-  maintainAspectRatio:false,
-  plugins:{legend:{labels:{color:"#fff"}}},
-  scales:{
-    x:{ticks:{color:"#fff"},grid:{color:"rgba(255,255,255,.1)"}},
-    y:{ticks:{color:"#fff"},grid:{color:"rgba(255,255,255,.1)"}}
+const baseOptions = {
+  responsive: true,
+  maintainAspectRatio: false,
+  plugins: {legend: {labels: {color: "#fff"}}},
+  scales: {
+    x: {ticks: {color: "#fff"}, grid: {color: "rgba(255,255,255,.1)"}},
+    y: {ticks: {color: "#fff"}, grid: {color: "rgba(255,255,255,.1)"}}
   }
 };
 
-/* INITIALIZE CHARTS */
-const effChart = new Chart(document.getElementById('effChart'), {
-  type:"line",
-  data:{
-    labels:["Now"],
-    datasets:[{
-      label:"Efficiency (%)",
-      data:[0],
-      borderColor:"#4ade80",
-      tension:.3
-    }]
-  },
-  options:baseOptions
-});
-
+/* INITIALIZE CHART - empty arrays, no dummy data */
 const ivChart = new Chart(document.getElementById('ivChart'), {
-  type:"line",
-  data:{
-    labels:["Now"],
-    datasets:[
-      {label:"Current (A)",data:[0],borderColor:"#60a5fa"},
-      {label:"Voltage (V)",data:[0],borderColor:"#a78bfa"}
+  type: "line",
+  data: {
+    labels: [],
+    datasets: [
+      {label: "Current (A)", data: [], borderColor: "#60a5fa", tension: .3},
+      {label: "Voltage (V)", data: [], borderColor: "#a78bfa", tension: .3}
     ]
   },
-  options:baseOptions
-});
-
-const rpmChart = new Chart(document.getElementById('rpmChart'), {
-  type:"line",
-  data:{
-    labels:["Now"],
-    datasets:[{
-      label:"RPM",
-      data:[0],
-      borderColor:"#fbbf24"
-    }]
-  },
-  options:baseOptions
+  options: baseOptions
 });
 
 /* ------------------------------------------
    WEBSOCKET CONNECTION
 ------------------------------------------- */
 
-const socket = new WebSocket("ws://project.local:8080");
+document.addEventListener("DOMContentLoaded", () => {
+  initGauges();
 
-socket.onopen = () => {
+  const socket = new WebSocket("ws://project.local:8080");
+
+  socket.onopen = () => {
     console.log("✓ WebSocket connected");
-};
+  };
 
-socket.onerror = (error) => {
+  socket.onerror = (error) => {
     console.error("WebSocket error:", error);
-};
+  };
 
-socket.onclose = () => {
+  socket.onclose = () => {
     console.log("WebSocket disconnected");
-};
+  };
 
-socket.onmessage = (event) => {
+  socket.onmessage = (event) => {
     const data = JSON.parse(event.data);
 
-    const voltage = data.voltage;
-    const current = data.current;
-    const rpm     = data.rpm;
-    const temp    = data.temp;
-    const eff     = data.efficiency;
+    const voltage  = data.voltage;
+    const current  = data.current;
+    const rpm      = data.rpm;
+    const temp     = data.temp;
     const battTemp = data.battTemp;
 
     // UPDATE KPI TEXT
-    kV.innerText   = voltage + " V";
-    kI.innerText   = current + " A";
-    kRPM.innerText = rpm;
-    kEff.innerText = eff + "%";
+    kV.innerText   = voltage.toFixed(2) + " V";
+    kI.innerText   = current.toFixed(2) + " A";
+    kRPM.innerText = rpm.toFixed(2);
 
-    // UPDATE GAUGES
-    drawGauge(gRPM, rpm, 0, 6000, "RPM", "");
-    drawGauge(gI, current, 0, 120, "Current", "A");
-    drawGauge(gTM, temp, 0, 120, "Motor", "°C");
-    drawGauge(gTB, battTemp, 0, 90, "Battery", "°C");
+    // UPDATE GAUGE VALUE LABELS BELOW DIALS
+    gRPMv.innerText = rpm.toFixed(2);
+    gIv.innerText   = current.toFixed(2) + " A";
+    gTMv.innerText  = temp.toFixed(2) + " °C";
+    gTBv.innerText  = battTemp.toFixed(2) + " °C";
 
-    // UPDATE CHARTS (keep last 20 points)
-    if (effChart.data.labels.length > 20) {
-        effChart.data.labels.shift();
-        effChart.data.datasets[0].data.shift();
-    }
-    effChart.data.labels.push("");
-    effChart.data.datasets[0].data.push(eff);
-    effChart.update('none'); // Update without animation for smoother performance
+    // REDRAW GAUGES (canvas size already set, just redraw)
+    drawGauge(gRPM, rpm,      0,   6000);
+    drawGauge(gI,   current,  0,   120);
+    drawGauge(gTM,  temp,     0,   120);
+    drawGauge(gTB,  battTemp, 0,   90);
 
+    // UPDATE CHART (keep last 20 points)
     if (ivChart.data.labels.length > 20) {
-        ivChart.data.labels.shift();
-        ivChart.data.datasets[0].data.shift();
-        ivChart.data.datasets[1].data.shift();
+      ivChart.data.labels.shift();
+      ivChart.data.datasets[0].data.shift();
+      ivChart.data.datasets[1].data.shift();
     }
     ivChart.data.labels.push("");
     ivChart.data.datasets[0].data.push(current);
     ivChart.data.datasets[1].data.push(voltage);
     ivChart.update('none');
-
-    if (rpmChart.data.labels.length > 20) {
-        rpmChart.data.labels.shift();
-        rpmChart.data.datasets[0].data.shift();
-    }
-    rpmChart.data.labels.push("");
-    rpmChart.data.datasets[0].data.push(rpm);
-    rpmChart.update('none');
-};
+  };
+});
 </script>
 </body>
 </html>
