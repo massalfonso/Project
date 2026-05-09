@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Regenerative Braking Dashboard</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+ 
+<!-- Chart.js v3 -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+ 
+<style>
+:root {
+  --bg:#0b1020;
+  --panel:rgba(255,255,255,.06);
+  --panel2:rgba(255,255,255,.08);
+  --border:rgba(255,255,255,.12);
+  --text:#fff;
+  --muted:rgba(255,255,255,.65);
+  --good:#4ade80;
+  --warn:#fbbf24;
+  --bad:#fb7185;
+  --accent:#60a5fa;
+  --accent2:#a78bfa;
+  --radius:18px;
+}
+ 
+*{box-sizing:border-box}
+body{
+  margin:0;
+  background:var(--bg);
+  color:var(--text);
+  font-family:system-ui;
+}
+ 
+.wrap{
+  max-width:1300px;
+  margin:auto;
+  padding:24px;
+}
+ 
+header{
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  text-align:center;
+  margin-bottom:24px;
+}
+ 
+h1{margin:0 0 6px 0;font-size:28px}
+.subtitle{color:var(--muted);font-size:13px}
+ 
+.grid{
+  display:grid;
+  grid-template-columns:1.2fr .8fr;
+  gap:16px;
+}
+ 
+.card{
+  background:var(--panel);
+  border:1px solid var(--border);
+  border-radius:var(--radius);
+}
+ 
+.hd{
+  padding:14px;
+  border-bottom:1px solid var(--border);
+  font-weight:600;
+}
+ 
+.bd{padding:14px}
+ 
+/* KPI row — 2 boxes only (RPM removed) */
+.kpis{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:12px;
+  margin-bottom:14px;
+}
+ 
+.kpi{
+  background:var(--panel2);
+  padding:12px;
+  border-radius:14px;
+}
+ 
+.kpi .label{color:var(--muted);font-size:12px;margin-bottom:4px}
+.kpi .val{font-size:20px;font-weight:700}
+ 
+/* ── Segmented current bar ── */
+.current-display{
+  background:var(--panel2);
+  border-radius:14px;
+  padding:14px 16px;
+  margin-bottom:14px;
+  display:flex;
+  align-items:center;
+  gap:16px;
+}
+ 
+.current-label-block .label{color:var(--muted);font-size:12px}
+.current-label-block .val{font-size:22px;font-weight:700;color:var(--accent);white-space:nowrap}
+ 
+.current-bar-wrap{
+  flex:1;
+  display:flex;
+  flex-direction:column;
+  gap:5px;
+}
+ 
+.seg-bar{
+  display:flex;
+  gap:3px;
+  height:22px;
+}
+ 
+.seg{
+  flex:1;
+  border-radius:3px;
+  background:rgba(255,255,255,.08);
+  transition:background .12s, box-shadow .12s;
+}
+ 
+.seg.on-green  { background:#4ade80; box-shadow:0 0 6px #4ade8077; }
+.seg.on-yellow { background:#fbbf24; box-shadow:0 0 6px #fbbf2477; }
+.seg.on-red    { background:#fb7185; box-shadow:0 0 6px #fb718577; }
+ 
+.seg-scale{
+  display:flex;
+  justify-content:space-between;
+  font-size:10px;
+  color:var(--muted);
+}
+ 
+/* chart */
+.chartBox{
+  background:rgba(255,255,255,.04);
+  border:1px solid var(--border);
+  border-radius:14px;
+  padding:10px;
+  height:220px;
+  position:relative;
+}
+ 
+.side{display:grid;gap:16px}
+ 
+.gauges{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:12px;
+}
+ 
+.gauge{
+  background:rgba(255,255,255,.05);
+  border:1px solid var(--border);
+  border-radius:14px;
+  padding:12px;
+}
+ 
+.gauge .top{
+  font-size:13px;
+  margin-bottom:4px;
+}
+ 
+.dial{
+  height:140px;
+  width:100%;
+  display:block;
+}
+ 
+.gauge-val{
+  text-align:center;
+  font-size:15px;
+  font-weight:600;
+  margin-top:4px;
+}
+</style>
+</head>
+ 
+<body>
+<div class="wrap">
+ 
+<header>
+  <h1>Regenerative Braking Dashboard</h1>
+  <div class="subtitle">Charging &amp; thermal monitoring</div>
+</header>
+ 
+<div class="grid">
+ 
+<!-- MAIN -->
+<section class="card">
+  <div class="hd">Overview</div>
+  <div class="bd">
+ 
+    <!-- 2 KPI boxes -->
+    <div class="kpis">
+      <div class="kpi">
+        <div class="label">Charge Current</div>
+        <div class="val" id="kI">-- A</div>
+      </div>
+      <div class="kpi">
+        <div class="label">Battery Voltage</div>
+        <div class="val" id="kV">-- V</div>
+      </div>
+    </div>
+ 
+    <!-- Segmented LED current bar -->
+    <div class="current-display">
+      <div class="current-label-block">
+        <div class="label">Current Flow</div>
+        <div class="val" id="cdI">-- A</div>
+      </div>
+      <div class="current-bar-wrap">
+        <div class="seg-bar" id="segBar"></div>
+        <div class="seg-scale">
+          <span>0</span><span>1.1 A</span><span>2.2 A</span><span>3.3 A</span>
+        </div>
+      </div>
+    </div>
+ 
+    <!-- Rolling chart -->
+    <div class="chartBox"><canvas id="ivChart"></canvas></div>
+ 
+  </div>
+</section>
+ 
+<!-- SIDEBAR -->
+<aside class="side">
+  <section class="card">
+    <div class="hd">Gauges</div>
+    <div class="bd gauges">
+ 
+      <!-- TOP LEFT: Throttle -->
+      <div class="gauge">
+        <div class="top">Throttle</div>
+        <canvas class="dial" id="gTHR"></canvas>
+        <div class="gauge-val" id="gTHRv" style="color:#a78bfa">-- %</div>
+      </div>
+ 
+      <!-- TOP RIGHT: RPM -->
+      <div class="gauge">
+        <div class="top">RPM</div>
+        <canvas class="dial" id="gRPM"></canvas>
+        <div class="gauge-val" id="gRPMv" style="color:#60a5fa">--</div>
+      </div>
+ 
+      <!-- BOTTOM LEFT: Motor Temp -->
+      <div class="gauge">
+        <div class="top">Motor Temp</div>
+        <canvas class="dial" id="gTM"></canvas>
+        <div class="gauge-val" id="gTMv" style="color:#fb7185">-- °C</div>
+      </div>
+ 
+      <!-- BOTTOM RIGHT: Battery Temp -->
+      <div class="gauge">
+        <div class="top">Battery Temp</div>
+        <canvas class="dial" id="gTB"></canvas>
+        <div class="gauge-val" id="gTBv" style="color:#fbbf24">-- °C</div>
+      </div>
+ 
+    </div>
+  </section>
+</aside>
+ 
+</div>
+</div>
+ 
+<script>
+/* ── SEGMENTED BAR ── */
+const SEG_COUNT = 24;
+const segBarEl = document.getElementById("segBar");
+for (let i = 0; i < SEG_COUNT; i++) {
+  const s = document.createElement("div");
+  s.className = "seg";
+  segBarEl.appendChild(s);
+}
+ 
+function updateSegBar(current, max) {
+  const segs = segBarEl.querySelectorAll(".seg");
+  const lit = Math.round(Math.min(Math.max(current / max, 0), 1) * SEG_COUNT);
+  segs.forEach((s, i) => {
+    s.className = "seg";
+    if (i < lit) {
+      const pct = i / SEG_COUNT;
+      s.classList.add(pct < 0.6 ? "on-green" : pct < 0.85 ? "on-yellow" : "on-red");
+    }
+  });
+}
+ 
+/* ── GAUGE DRAW ── */
+function drawGauge(canvas, value, min, max, color) {
+  const ctx = canvas.getContext("2d");
+  const w = canvas.width, h = canvas.height;
+  ctx.clearRect(0, 0, w, h);
+ 
+  const cx = w / 2, cy = h * 0.65;
+  const r  = Math.min(w, h) * 0.42;
+  const startAng = Math.PI * 0.8, endAng = Math.PI * 2.2;
+  const t = Math.min(Math.max((value - min) / (max - min), 0), 1);
+ 
+  ctx.lineCap = "round";
+ 
+  // background track
+  ctx.lineWidth = r * 0.16;
+  ctx.strokeStyle = "rgba(255,255,255,.1)";
+  ctx.beginPath();
+  ctx.arc(cx, cy, r, startAng, endAng);
+  ctx.stroke();
+ 
+  // filled arc
+  ctx.strokeStyle = color;
+  ctx.beginPath();
+  ctx.arc(cx, cy, r, startAng, startAng + (endAng - startAng) * t);
+  ctx.stroke();
+ 
+  // needle
+  const ang = startAng + (endAng - startAng) * t;
+  ctx.strokeStyle = "#fff";
+  ctx.lineWidth = 2.5;
+  ctx.beginPath();
+  ctx.moveTo(cx, cy);
+  ctx.lineTo(cx + Math.cos(ang) * r * 0.82, cy + Math.sin(ang) * r * 0.82);
+  ctx.stroke();
+ 
+  // centre dot
+  ctx.fillStyle = "#fff";
+  ctx.beginPath();
+  ctx.arc(cx, cy, 4, 0, Math.PI * 2);
+  ctx.fill();
+}
+ 
+/* ── GAUGE CANVAS SIZING via ResizeObserver ── */
+const gaugeMap = [
+  { id: "gTHR", min: 0, max: 100,  color: "#a78bfa" },
+  { id: "gRPM", min: 0, max: 6000, color: "#60a5fa" },
+  { id: "gTM",  min: 0, max: 120,  color: "#fb7185" },
+  { id: "gTB",  min: 0, max: 90,   color: "#fbbf24" },
+];
+ 
+const lastData = { throttle: 0, rpm: 0, temp: 0, battTemp: 0 };
+const dataMap  = { gTHR: "throttle", gRPM: "rpm", gTM: "temp", gTB: "battTemp" };
+ 
+function redrawAllGauges() {
+  gaugeMap.forEach(({ id, min, max, color }) => {
+    const c = document.getElementById(id);
+    c.width  = c.offsetWidth  || 150;
+    c.height = c.offsetHeight || 140;
+    drawGauge(c, lastData[dataMap[id]] ?? 0, min, max, color);
+  });
+}
+ 
+const ro = new ResizeObserver(redrawAllGauges);
+gaugeMap.forEach(({ id }) => ro.observe(document.getElementById(id)));
+ 
+/* ── CHART.JS ── */
+const ivChart = new Chart(document.getElementById("ivChart"), {
+  type: "line",
+  data: {
+    labels: [],
+    datasets: [
+      { label: "Current (A)", data: [], borderColor: "#60a5fa", tension: .3, pointRadius: 0 },
+      { label: "Voltage (V)", data: [], borderColor: "#a78bfa", tension: .3, pointRadius: 0 }
+    ]
+  },
+  options: {
+    responsive: true,
+    maintainAspectRatio: false,
+    animation: false,
+    plugins: { legend: { labels: { color: "#fff" } } },
+    scales: {
+      x: { ticks: { color: "#fff" }, grid: { color: "rgba(255,255,255,.08)" } },
+      y: { ticks: { color: "#fff" }, grid: { color: "rgba(255,255,255,.08)" } }
+    }
+  }
+});
+ 
+/* ── WEBSOCKET WITH AUTO-RECONNECT ── */
+const WS_URL = "ws://project.local:8080";
+const MAX_PTS = 20;
+let ws, reconnectTimer;
+ 
+function connect() {
+  clearTimeout(reconnectTimer);
+  ws = new WebSocket(WS_URL);
+ 
+  ws.onopen  = () => console.log("✓ WebSocket connected");
+  ws.onerror = (e) => console.error("WebSocket error:", e);
+  ws.onclose = () => {
+    console.warn("WebSocket closed — retrying in 3 s…");
+    reconnectTimer = setTimeout(connect, 3000);
+  };
+ 
+  ws.onmessage = (event) => {
+    let data;
+    try { data = JSON.parse(event.data); }
+    catch { console.warn("Bad JSON:", event.data); return; }
+ 
+    const voltage  = data.voltage  ?? null;
+    const current  = data.current  ?? null;
+    const rpm      = data.rpm      ?? null;
+    const temp     = data.temp     ?? null;
+    const battTemp = data.battTemp ?? null;
+    const throttle = data.throttle ?? null;
+ 
+    // Cache for ResizeObserver redraws
+    if (throttle !== null) lastData.throttle = throttle;
+    if (rpm      !== null) lastData.rpm      = rpm;
+    if (temp     !== null) lastData.temp     = temp;
+    if (battTemp !== null) lastData.battTemp = battTemp;
+ 
+    // KPI boxes
+    document.getElementById("kI").innerText = current !== null ? current.toFixed(2) + " A" : "-- A";
+    document.getElementById("kV").innerText = voltage !== null ? voltage.toFixed(2) + " V" : "-- V";
+ 
+    // Segmented bar
+    document.getElementById("cdI").innerText = current !== null ? current.toFixed(2) + " A" : "-- A";
+    if (current !== null) updateSegBar(current, 3.3);
+ 
+    // Gauge labels
+    document.getElementById("gTHRv").innerText = throttle !== null ? throttle.toFixed(1) + " %" : "-- %";
+    document.getElementById("gRPMv").innerText  = rpm      !== null ? rpm.toFixed(0)             : "--";
+    document.getElementById("gTMv").innerText   = temp     !== null ? temp.toFixed(1)     + " °C" : "-- °C";
+    document.getElementById("gTBv").innerText   = battTemp !== null ? battTemp.toFixed(1) + " °C" : "-- °C";
+ 
+    // Redraw gauges
+    redrawAllGauges();
+ 
+    // Chart
+    if (ivChart.data.labels.length >= MAX_PTS) {
+      ivChart.data.labels.shift();
+      ivChart.data.datasets[0].data.shift();
+      ivChart.data.datasets[1].data.shift();
+    }
+    ivChart.data.labels.push("");
+    ivChart.data.datasets[0].data.push(current);
+    ivChart.data.datasets[1].data.push(voltage);
+    ivChart.update("none");
+  };
+}
+ 
+document.addEventListener("DOMContentLoaded", connect);
+</script>
+</body>
+</html>
