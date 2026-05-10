@@ -10,7 +10,7 @@ clients = set()
 
 async def handler(websocket, path):
     clients.add(websocket)
-    print(f"✓ Client connected (total: {len(clients)})")
+    print(f"✓ Client con nected (total: {len(clients)})")
     try:
         await websocket.wait_closed()
     finally:
