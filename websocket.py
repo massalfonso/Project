@@ -3,7 +3,7 @@ import json
 import serial
 import websockets
 
-SERIAL_PORT = "/dev/ttyACM0"
+SERIAL_PORT = "/dev/ttyESP32"
 BAUD_RATE = 115200
 
 clients = set()
